@@ -2,6 +2,8 @@ from openai import AsyncOpenAI
 
 
 class OpenAI:
+    """OpenAI methods wrapper class"""
+
     def __init__(
         self,
         model: str = "llama-3.1-8b-instruct",

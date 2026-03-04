@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 
 class DBManager:
+    """SQLAlchemy methods wrapper class"""
+
     def __init__(self, db_path: str, debug: bool = True):
         self.engine = create_engine(db_path, echo=debug)
 
