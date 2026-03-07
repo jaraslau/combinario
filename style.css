@@ -88,6 +88,11 @@ body {
   color: #444444;
 }
 
+img {
+  user-select: none;
+  -moz-user-select: none;
+}
+
 .card-footer a {
   font-size: 12px;
   color: #aaaaaa;
