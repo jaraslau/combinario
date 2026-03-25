@@ -6,8 +6,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-COPY requirements .
-RUN pip install --no-cache-dir -r requirements
+RUN pip install poetry
+COPY combinario/pyproject.toml combinario/poetry.lock .
+RUN poetry config virtualenvs.create false \
+    && poetry install --without dev --no-interaction --no-ansi
 
 ENV PYTHONUNBUFFERED=1
 

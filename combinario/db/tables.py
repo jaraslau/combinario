@@ -1,10 +1,10 @@
 from typing import List
 from sqlalchemy import String, ForeignKey, UniqueConstraint, CheckConstraint, Index
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import mapped_column, relationship, Mapped
+from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship, Mapped
+from sqlalchemy.ext.asyncio import AsyncAttrs
 
 
-class Base(DeclarativeBase):
+class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
@@ -12,11 +12,11 @@ class Item(Base):
     __tablename__ = "item"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    emoji: Mapped[str] = mapped_column(String())
-    text: Mapped[str] = mapped_column(String())
+    emoji: Mapped[str] = mapped_column(String(), nullable=False)
+    text: Mapped[str] = mapped_column(String(), nullable=False)
 
     parents: Mapped[List["Parent"]] = relationship(
-        back_populates="item", cascade="all, delete-orphan"
+        back_populates="item", cascade="all, delete-orphan", lazy="selectin"
     )
 
     def __repr__(self) -> str:
@@ -27,14 +27,14 @@ class Parent(Base):
     __tablename__ = "parent"
     __table_args__ = (
         UniqueConstraint("item_id", "first", "second"),
-        CheckConstraint("first <= second"),
+        CheckConstraint("first <= second"),  # just a safety net
         Index("idx_first_second", "first", "second"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    first: Mapped[int] = mapped_column()
-    second: Mapped[int] = mapped_column()
-    item_id: Mapped[int] = mapped_column(ForeignKey("item.id"))
+    first: Mapped[int] = mapped_column(nullable=False)
+    second: Mapped[int] = mapped_column(nullable=False)
+    item_id: Mapped[int] = mapped_column(ForeignKey("item.id"), nullable=False)
 
     item: Mapped["Item"] = relationship(back_populates="parents")
 

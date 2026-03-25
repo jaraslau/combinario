@@ -85,7 +85,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: ${DB_URL}
-      REDIS_URL: "redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB}"
+      REDIS_URL: ${REDIS_URL}
       LLAMA_BASE_URL: "${LLM_BASE_URL}"
       OPEN_AI_API_KEY: "${OPEN_AI_API_KEY}"
     ports:
