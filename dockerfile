@@ -1,22 +1,34 @@
-FROM python:3.13-slim
-
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
-RUN pip install poetry
-COPY combinario/pyproject.toml combinario/poetry.lock .
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir poetry
+COPY combinario/pyproject.toml combinario/poetry.lock ./
 RUN poetry config virtualenvs.create false \
     && poetry install --without dev --no-interaction --no-ansi
 
-ENV PYTHONUNBUFFERED=1
+
+FROM python:3.13-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 RUN groupadd -r app && useradd -r -g app app
 
-RUN chown -R app:app /app
-
 COPY --chown=app:app combinario .
+
+ENV PYTHONUNBUFFERED=1
 
 USER app
