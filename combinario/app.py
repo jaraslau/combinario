@@ -6,7 +6,7 @@ from arq.connections import RedisSettings, ArqRedis
 from typing import AsyncGenerator, Union, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Depends, HTTPException
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from db import repository
 from schemas import ItemSchema, ParentSchema, JobSchema
 from config import settings
+from dependencies import SessionDep, RedisDep
 
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
@@ -56,15 +57,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    async with request.app.state.session_factory() as session:
-        yield session
-
-
-async def get_arq(request: Request) -> ArqRedis:
-    return request.app.state.arq_pool
-
-
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request=request, name="index.html")
@@ -74,8 +66,8 @@ async def index(request: Request) -> HTMLResponse:
 async def fetch_item(
     first: int,
     second: int,
-    session: AsyncSession = Depends(get_session),
-    arq_pool: ArqRedis = Depends(get_arq),
+    session: SessionDep,
+    arq_pool: RedisDep,
 ) -> Union[ItemSchema, JobSchema]:
     if first < 1 or second < 1:
         raise HTTPException(status_code=422, detail="IDs must be >= 1")
@@ -99,9 +91,7 @@ async def fetch_item(
 
 
 @app.get("/task/{job_id}")
-async def fetch_task(
-    job_id: str, arq_pool: ArqRedis = Depends(get_arq)
-) -> dict[str, Any]:
+async def fetch_task(job_id: str, arq_pool: RedisDep) -> dict[str, Any]:
     job = Job(job_id=job_id, redis=arq_pool)
     status = await job.status()
 
