@@ -10,7 +10,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from db import repository
 from schemas import ItemSchema, ParentSchema, JobSchema
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    engine = create_async_engine(settings.db_url, echo=settings.debug_mode)
+    engine = create_async_engine(str(settings.db_url), echo=settings.debug_mode)
 
     async with engine.begin() as conn:
         from db.tables import Base
