@@ -44,6 +44,7 @@ async def prepopulate() -> None:
             for element in BASE_ELEMENTS:
                 try:
                     await repository.get_item(element["id"])
+                    logger.info(f"Item {element['id']} already present, skipping")
                 except ItemDoesNotExistError:
                     item = ItemSchema(
                         id=element["id"],
@@ -55,8 +56,7 @@ async def prepopulate() -> None:
                         emoji=item.emoji, text=item.text, parents=[]
                     )
                     logger.info(f"Prepopulated with item {item_id}")
-                else:
-                    logger.info(f"Item {element['id']} already present, skipping")
+
     finally:
         await engine.dispose()
 
