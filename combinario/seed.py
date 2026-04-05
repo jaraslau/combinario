@@ -1,12 +1,12 @@
 import asyncio
 import logging
-import os
 from typing import TypedDict
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from core.db.repositories.item import ItemRepository
 from core.db.exceptions import ItemDoesNotExistError
+from core.db.settings import db_settings
 from schemas.item import ItemSchema
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
@@ -28,14 +28,9 @@ BASE_ELEMENTS: list[BaseElement] = [
 
 
 async def prepopulate() -> None:
-    db_url = os.getenv("DB_URL")
-    if not db_url:
-        logger.error("Could not find DB_URL in env")
-        raise ValueError("DB_URL is not set")
+    logger.info(f"Prepopulating {db_settings.db_url} with default elements.")
 
-    logger.info(f"Prepopulating {db_url} with default elements.")
-
-    engine = create_async_engine(db_url)
+    engine = create_async_engine(str(db_settings.db_url))
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     try:
