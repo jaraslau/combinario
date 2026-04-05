@@ -12,10 +12,16 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from db import repository
-from schemas import ItemSchema, ParentSchema, JobSchema
-from config import settings
-from dependencies import SessionDep, RedisDep
+from schemas.item import ItemSchema
+from schemas.parent import ParentSchema
+from schemas.job import JobSchema
+
+from core.redis.dependencies import RedisDep
+from core.db.dependencies import ItemRepoDep
+from core.db.exceptions import ItemDoesNotExistError
+
+from core.db.settings import db_settings
+from core.redis.settings import redis_settings
 
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
@@ -24,16 +30,18 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    engine = create_async_engine(str(settings.db_url), echo=settings.debug_mode)
+    engine = create_async_engine(str(db_settings.db_url), echo=db_settings.debug_mode)
 
     async with engine.begin() as conn:
-        from db.tables import Base
+        from core.db.models import Base
 
         await conn.run_sync(Base.metadata.create_all)
 
     app.state.session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    redis_conn = RedisSettings(host=settings.redis_host, port=settings.redis_port)
+    redis_conn = RedisSettings(
+        host=redis_settings.redis_host, port=redis_settings.redis_port
+    )
     app.state.arq_pool: ArqRedis = await create_pool(redis_conn)  # type: ignore
 
     try:
@@ -47,7 +55,7 @@ app = FastAPI(
     lifespan=lifespan,
     json_loads=orjson.loads,
     default_response_class=ORJSONResponse,
-    debug=settings.debug_mode,
+    debug=db_settings.debug_mode,
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
@@ -66,27 +74,30 @@ async def index(request: Request) -> HTMLResponse:
 async def fetch_item(
     first: int,
     second: int,
-    session: SessionDep,
+    repository: ItemRepoDep,
     arq_pool: RedisDep,
 ) -> Union[ItemSchema, JobSchema]:
     if first < 1 or second < 1:
         raise HTTPException(status_code=422, detail="IDs must be >= 1")
 
     parent = ParentSchema(first=first, second=second)
-    existing = await repository.get_item_by_parents(session, parent)
-    if existing:
-        return existing
-
-    first_item = await repository.get_item(session, first)
-    second_item = await repository.get_item(session, second)
-    if not first_item or not second_item:
-        raise HTTPException(status_code=404, detail="Item not found")
+    try:
+        return ItemSchema.model_validate(
+            await repository.get_item_by_parents(
+                first_id=parent.first, second_id=parent.second
+            )
+        )
+    except ItemDoesNotExistError:
+        try:
+            first_item = ItemSchema.model_validate(await repository.get_item(first))
+            second_item = ItemSchema.model_validate(await repository.get_item(second))
+        except ItemDoesNotExistError:
+            raise HTTPException(status_code=404, detail="Item not found")
 
     prompt = f"{first_item.text} + {second_item.text}"
     job = await arq_pool.enqueue_job("generate_task", prompt, first, second)
     if not job:
         raise HTTPException(status_code=500, detail="Failed to enqueue job")
-
     return JobSchema(enqueued=job.job_id)
 
 

@@ -13,16 +13,3 @@ class ParentSchema(BaseModel):
         if self.first > self.second:
             self.first, self.second = self.second, self.first
         return self
-
-
-class ItemSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int | None = Field(default=None, ge=0)
-    emoji: str = Field(..., min_length=1)
-    text: str = Field(..., min_length=1)
-    parents: list[ParentSchema] = []
-
-
-class JobSchema(BaseModel):
-    enqueued: str = Field(..., min_length=1)

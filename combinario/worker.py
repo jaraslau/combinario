@@ -4,17 +4,26 @@ from typing import Any
 from arq.connections import RedisSettings
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from db import repository
-from schemas import ItemSchema, ParentSchema
-from models.model import OpenAI
-from config import settings
+from schemas.item import ItemSchema
+from schemas.parent import ParentSchema
+
+from core.db.repositories.item import ItemRepository
+
+from core.llm.model import OpenAI
+
+from core.db.settings import db_settings
+from core.llm.settings import llm_settings
+from core.redis.settings import redis_settings
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 async def generate_task(
-    ctx: dict[str, Any], prompt: str, first: int, second: int
+    ctx: dict[str, Any],
+    prompt: str,
+    first: int,
+    second: int,
 ) -> ItemSchema:
     openai_client = ctx["openai_client"]
     session_factory = ctx["session_factory"]
@@ -35,20 +44,23 @@ async def generate_task(
     )
 
     async with session_factory() as session:
-        item.id = await repository.add_item(session, item)
+        repository = ItemRepository(session)
+        item.id = await repository.add_item(
+            emoji=item.emoji, text=item.text, parents=[(first, second)]
+        )
 
     return item
 
 
 async def startup(ctx: dict[str, Any]) -> None:
-    engine = create_async_engine(settings.db_url, echo=settings.debug_mode)
+    engine = create_async_engine(str(db_settings.db_url), echo=db_settings.debug_mode)
     ctx["engine"] = engine
     ctx["session_factory"] = async_sessionmaker(engine, expire_on_commit=False)
     ctx["openai_client"] = OpenAI(
-        base_url=settings.llm_base_url,
-        api_key=settings.open_ai_api_key,
-        max_tokens=settings.max_tokens,
-        temperature=settings.model_temperature,
+        base_url=llm_settings.llm_base_url,
+        api_key=llm_settings.open_ai_api_key,
+        max_tokens=llm_settings.max_tokens,
+        temperature=llm_settings.model_temperature,
     )
     logger.info("ARQ worker started")
 
@@ -66,6 +78,6 @@ class WorkerSettings:
     on_shutdown = shutdown
 
     redis_settings = RedisSettings(
-        host=settings.redis_host,
-        port=settings.redis_port,
+        host=redis_settings.redis_host,
+        port=redis_settings.redis_port,
     )

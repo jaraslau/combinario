@@ -5,8 +5,9 @@ from typing import TypedDict
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
-from db import repository
-from schemas import ItemSchema
+from core.db.repositories.item import ItemRepository
+from core.db.exceptions import ItemDoesNotExistError
+from schemas.item import ItemSchema
 
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,15 +40,20 @@ async def prepopulate() -> None:
 
     try:
         async with session_factory() as session:
+            repository = ItemRepository(session)
             for element in BASE_ELEMENTS:
-                if not await repository.get_item(session, element["id"]):
+                try:
+                    await repository.get_item(element["id"])
+                except ItemDoesNotExistError:
                     item = ItemSchema(
                         id=element["id"],
                         emoji=element["emoji"],
                         text=element["text"],
                         parents=[],
                     )
-                    item_id = await repository.add_item(session, item)
+                    item_id = await repository.add_item(
+                        emoji=item.emoji, text=item.text, parents=[]
+                    )
                     logger.info(f"Prepopulated with item {item_id}")
                 else:
                     logger.info(f"Item {element['id']} already present, skipping")

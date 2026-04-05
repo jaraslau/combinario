@@ -1,7 +1,7 @@
 from typing import Annotated, AsyncGenerator
 from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from arq.connections import ArqRedis
+from core.db.repositories.item import ItemRepository
 
 
 async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -9,9 +9,11 @@ async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-async def get_arq(request: Request) -> ArqRedis:
-    return request.app.state.arq_pool
-
-
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
-RedisDep = Annotated[ArqRedis, Depends(get_arq)]
+
+
+def get_repository(session: SessionDep) -> ItemRepository:
+    return ItemRepository(session=session)
+
+
+ItemRepoDep = Annotated[ItemRepository, Depends(get_repository)]
