@@ -32,11 +32,6 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     engine = create_async_engine(str(db_settings.db_url), echo=db_settings.debug_mode)
 
-    async with engine.begin() as conn:
-        from core.db.models import Base
-
-        await conn.run_sync(Base.metadata.create_all)
-
     app.state.session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     redis_conn = RedisSettings(

@@ -73,6 +73,23 @@ services:
       retries: 3
       start_period: 5s
 
+  migrate:
+    build:
+      context: .
+      target: runtime
+    container_name: app_migrate
+    env_file:
+      - .env
+    volumes:
+      - ./combinario/migrations:/app/migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - backend
+    command: alembic upgrade head
+    restart: on-failure
+
   seed:
     build:
       context: .
@@ -82,6 +99,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     environment:
       DB_URL: ${DB_URL}
     networks:
@@ -100,6 +119,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       llama:
