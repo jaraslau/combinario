@@ -4,7 +4,7 @@ from arq import create_pool
 from arq.jobs import Job, JobStatus
 from arq.connections import RedisSettings, ArqRedis
 from typing import AsyncGenerator, Union, Any
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, AsyncExitStack
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, ORJSONResponse
@@ -29,21 +29,33 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def db_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     engine = create_async_engine(str(db_settings.db_url), echo=db_settings.debug_mode)
-
     app.state.session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    try:
+        yield
+    finally:
+        await engine.dispose()
 
+
+@asynccontextmanager
+async def redis_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     redis_conn = RedisSettings(
         host=redis_settings.redis_host, port=redis_settings.redis_port
     )
     app.state.arq_pool: ArqRedis = await create_pool(redis_conn)  # type: ignore
-
     try:
         yield
     finally:
         await app.state.arq_pool.close()
-        await engine.dispose()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    async with AsyncExitStack() as stack:
+        for ls in [db_lifespan, redis_lifespan]:
+            await stack.enter_async_context(ls(app))
+        yield
 
 
 app = FastAPI(
