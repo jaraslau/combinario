@@ -39,14 +39,13 @@ async def generate_task(
         emoji = result[0]
         text = result[1:]
 
-    item = ItemSchema(
-        emoji=emoji, text=text, parents=[ParentSchema(first=first, second=second)]
-    )
+    parent = ParentSchema(first=first, second=second)
+    item = ItemSchema(emoji=emoji, text=text, parents=[parent])
 
     async with session_factory() as session:
         repository = ItemRepository(session)
         item.id = await repository.add_item(
-            emoji=item.emoji, text=item.text, parents=[(first, second)]
+            emoji=item.emoji, text=item.text, parents=[(parent.first, parent.second)]
         )
 
     return item

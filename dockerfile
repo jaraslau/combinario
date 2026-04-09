@@ -31,4 +31,7 @@ COPY --chown=app:app combinario .
 
 ENV PYTHONUNBUFFERED=1
 
+COPY --chown=app:app entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER app

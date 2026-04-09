@@ -31,10 +31,6 @@ services:
     image: postgres:16
     container_name: app_db
     env_file: .env
-    environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -73,43 +69,6 @@ services:
       retries: 3
       start_period: 5s
 
-  migrate:
-    build:
-      context: .
-      target: runtime
-    container_name: app_migrate
-    env_file:
-      - .env
-    volumes:
-      - ./combinario/migrations:/app/migrations
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - backend
-    command: alembic upgrade head
-    restart: on-failure
-
-  seed:
-    build:
-      context: .
-      target: runtime
-    container_name: db_seed
-    env_file: .env
-    depends_on:
-      db:
-        condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
-    environment:
-      DB_URL: ${DB_URL}
-    networks:
-      - backend
-    command:
-      - python
-      - seed.py
-    restart: "no"
-
   app:
     build:
       context: .
@@ -119,35 +78,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       llama:
         condition: service_healthy
-      seed:
-        condition: service_completed_successfully
-    environment:
-      DB_URL: ${DB_URL}
-      REDIS_URL: ${REDIS_URL}
-      LLAMA_BASE_URL: ${LLM_BASE_URL}
-      OPEN_AI_API_KEY: ${OPEN_AI_API_KEY}
     ports:
       - "8080:8080"
     networks:
       - backend
       - frontend
-    command:
-      - uvicorn
-      - app:app
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8080"
-      - --loop
-      - uvloop
-      - --http
-      - httptools
+    entrypoint: /entrypoint.sh
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -169,18 +109,11 @@ services:
         condition: service_healthy
       llama:
         condition: service_healthy
-      seed:
-        condition: service_completed_successfully
-    environment:
-      DB_URL: ${DB_URL}
-      REDIS_URL: ${REDIS_URL}
-      LLAMA_BASE_URL: ${LLM_BASE_URL}
-      OPEN_AI_API_KEY: ${OPEN_AI_API_KEY}
+      app:
+        condition: service_healthy
     networks:
       - backend
-    command:
-      - arq
-      - worker.WorkerSettings
+    command: arq worker.WorkerSettings
     restart: unless-stopped
 
 networks:
