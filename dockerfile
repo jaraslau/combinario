@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir poetry
-COPY combinario/pyproject.toml combinario/poetry.lock ./
+COPY pyproject.toml poetry.lock ./
 RUN poetry config virtualenvs.create false \
     && poetry install --without dev --no-interaction --no-ansi
 
@@ -28,6 +28,9 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 RUN groupadd -r app && useradd -r -g app app
 
 COPY --chown=app:app combinario .
+
+COPY --chown=app:app migrations ./migrations
+COPY --chown=app:app alembic.ini ./alembic.ini
 
 ENV PYTHONUNBUFFERED=1
 
