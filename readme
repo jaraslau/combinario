@@ -1,4 +1,4 @@
-combinario – merge two words and let AI create a brand-new concept.
+combinario – merge two words and let AI create a brand-new concept using a locally hosted model.
 
 Project is work in progress.
 
@@ -8,14 +8,14 @@ This is an attempt of making an open source implementation of Infinite Craft by 
 Run via Docker:
     docker compose up
 Poetry is a preffered package manager if testing locally.
-requirements is present for backward-compatibility and docker.
+requirements is present if you want to ignore docker and run everything manually for some reason.
 
 Stack:
-    Runs on llama.cpp server, FastAPI for backend, arq for task queries, SQLAlchemy for ORM queries (to postgres) and pydantic for data validation.
+    Runs on llama.cpp server, FastAPI for backend, arq for jobs, SQLAlchemy for ORM queries to postgres and pydantic for data validation.
 
 LLM notes:
     The recommended model for local generation is Meta Llama 3.1 8B Instruct Q6_K.
     Models can be downloaded from Hugging Face.
-    If you want to use another server instead of llama.cpp (e.g. ollama), edit the ./dockerfile
+    If you want to use another server instead of llama.cpp (e.g. ollama), edit docker compose
     Any server is fine if as long as it has OpenAI Chat completions API support.
     VLLM is not recommended, as it does not support quantized models, but the choice shall rather be made depending on hardware limitations.

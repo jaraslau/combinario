@@ -2,8 +2,9 @@ fastapi
 uvicorn[standard]
 orjson
 SQLAlchemy
-psycopg2-binary
+asyncpg
 jinja2
 arq
 openai
 pydantic_settings
+alembic
