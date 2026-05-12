@@ -12,8 +12,8 @@ class Item(Base):
     __tablename__ = "item"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    emoji: Mapped[str] = mapped_column(String(), nullable=False)
-    text: Mapped[str] = mapped_column(String(), nullable=False)
+    emoji: Mapped[str] = mapped_column(String, nullable=False)
+    text: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
     parents: Mapped[List["Parent"]] = relationship(
         back_populates="item", cascade="all, delete-orphan", lazy="selectin"
