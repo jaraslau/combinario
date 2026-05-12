@@ -74,8 +74,11 @@
         <input type="text" placeholder="Search items..." />
       </div>
     </div>
-    <div class="workspace"></div>
+    <div class="workspace">
+      <canvas id="stars-canvas"></canvas>
+    </div>
     <script src="{{ url_for('static', path='js/items.js') }}"></script>
     <script src="{{ url_for('static', path='js/saver.js') }}"></script>
+    <script src="{{ url_for('static', path='js/stars.js') }}"></script>
   </body>
 </html>

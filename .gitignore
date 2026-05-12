@@ -5,3 +5,5 @@ venv/
 
 .ruff_cache/
 models/*.gguf
+
+node_modules
