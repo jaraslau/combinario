@@ -1,7 +1,7 @@
 services:
   llama:
     image: ghcr.io/ggml-org/llama.cpp:server
-    container_name: llama_cpp
+    container_name: combinario_llama_cpp
     env_file: .env
     command:
       - -m
@@ -29,7 +29,7 @@ services:
 
   db:
     image: postgres:16
-    container_name: app_db
+    container_name: combinario_db
     env_file: .env
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -45,7 +45,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: app_redis
+    container_name: combinario_redis
     env_file: .env
     command:
       - redis-server
@@ -73,7 +73,7 @@ services:
     build:
       context: .
       target: runtime
-    container_name: app_combinario
+    container_name: combinario_app
     env_file: .env
     depends_on:
       db:
@@ -100,7 +100,7 @@ services:
     build:
       context: .
       target: runtime
-    container_name: arq_worker
+    container_name: combinario_worker
     env_file: .env
     depends_on:
       redis:
